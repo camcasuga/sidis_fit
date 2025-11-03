@@ -14,26 +14,22 @@ class MyMinimizer:
         self.rarray = rarray
         self.fit_func = lambda Qs2, gamma, ec, p: self.parametrization(Qs2, gamma, ec, p)
 
+    def Ff(self, r, theta):
+        lambda_qcd = 0.241
+        exponent = (((r**2 * theta[0]) ** theta[1])/4 * np.log( (1/(r*lambda_qcd)) + np.exp(1)*theta[2] ) )** theta[3]
+        return 1 - np.exp(-exponent) ** (1/theta[3])
+
     def parametrization(self, Qs2, gamma, ec, p):
         ''' Returns function F(r) for parameters (Qs2, ec, p, gamma) '''
-        lambda_qcd = 0.241
         r = self.rarray
         theta = [Qs2, gamma, ec, p]
-
-        def Ff(r):
-
-            exponent = (((r**2 * Qs2) ** gamma)/4 * np.log( (1/(r*lambda_qcd)) + np.exp(1)*ec ) )** p
-
-            func = 1 - np.exp(-exponent) ** (1/p)
-
-            return func
         
         if self.lbounds is not None and self.ubounds is not None:
             for i in range(4):
                 if theta[i] < self.lbounds[i] or theta[i] > self.ubounds[i]:
                     return np.inf * np.ones_like(r)
 
-        return np.array([np.log(Ff(ri)) for ri in r])
+        return np.array([np.log(self.Ff(ri, theta)) for ri in r])
     
     def fit_ls(self):
         init = self.initial_params
