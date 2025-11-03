@@ -88,12 +88,17 @@ class BKDipole:
 
         return N
 
-    def Nr(self, Y, r_min = 1e-3, r_max = 1e2, r_points = 50):
+    def Nr(self, Y, r_values): #r_min = 1e-3, r_max = 1e2, r_points = 50):
         '''
         Returns the dipole amplitude N evaluated at 
         multiple points r [GeV^-1] logarithimically spaced between r_min and r_max.
         '''
         #bk_interpolator = ReadBKDipole(bk_file_dir)
-        r_values = np.logspace(np.log10(r_min), np.log10(r_max), r_points)
+        #r_values = np.logspace(np.log10(r_min), np.log10(r_max), r_points)
         N_values = [self.N(Y, r) for r in r_values]
-        return r_values, np.array(N_values)
+        return np.array(N_values)
+    
+    def ln_Nr(self, Y, r_values): #r_min = 1e-3, r_max = 1e2, r_points = 50):
+
+        N_values = [np.log(self.N(Y, r)) for r in r_values]
+        return np.array(N_values)
