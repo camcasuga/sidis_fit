@@ -15,12 +15,13 @@ class MyMinimizer:
         self.fit_func = lambda Qs2, gamma, ec, p: self.parametrization(Qs2, gamma, ec, p)
 
     def Ff(self, r, theta):
+        ''' Returns function F(r) for parameters (Qs2, ec, p, gamma) '''
         lambda_qcd = 0.241
         exponent = (((r**2 * theta[0]) ** theta[1])/4 * np.log( (1/(r*lambda_qcd)) + np.exp(1)*theta[2] ) )** theta[3]
         return 1 - np.exp(-exponent) ** (1/theta[3])
 
     def parametrization(self, Qs2, gamma, ec, p):
-        ''' Returns function F(r) for parameters (Qs2, ec, p, gamma) '''
+        ''' Returns bounded F(r) values over array of r'''
         r = self.rarray
         theta = [Qs2, gamma, ec, p]
         
@@ -32,6 +33,7 @@ class MyMinimizer:
         return np.array([np.log(self.Ff(ri, theta)) for ri in r])
     
     def fit_ls(self):
+        ''' Least squares fit to find optimal parameters '''
         init = self.initial_params
         r = self.rarray
         #fit_func = lambda p: self.fit_func(p[0], p[1], p[2], p[3])
