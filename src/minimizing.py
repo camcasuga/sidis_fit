@@ -3,7 +3,7 @@ import numpy as np
 
 class MyMinimizer:
 
-    def __init__(self, NrYinterpolator, y, rarray, initial_params, lbounds = None, ubounds = None):
+    def __init__(self, NrYinterpolator, y, rarray, initial_params, lbounds = None, ubounds = None, lsmethod = 'trf'):
         self.initial_params = initial_params #[0.05, 2.0, 0.4, 0.2]
         self.lbounds = lbounds
         self.ubounds = ubounds
@@ -12,6 +12,7 @@ class MyMinimizer:
         #self.r_range = (np.min(r_values), np.max(r_values))
         self.y = y
         self.rarray = rarray
+        self.lsmethod = lsmethod  #'lm' #'trf' #'dogbox'
         self.fit_func = lambda Qs2, gamma, ec, p: self.parametrization(Qs2, gamma, ec, p)
 
     def Ff(self, r, theta):
@@ -41,5 +42,5 @@ class MyMinimizer:
         #print("interpolator", np.shape(self.NrYinterpolator(self.y, r)))
         #print("err_func", np.shape(err_func([1.0, 0.0, 1.0, 1.0],self)))
         #out = leastsq(err_func, init, args = (self))[0] # out = basinhopping(err_func, init, args =(r,y))
-        out = least_squares(err_func, init, args = (self,))
+        out = least_squares(err_func, init, args = (self,), method = self.lsmethod)
         return out
