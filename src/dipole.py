@@ -82,7 +82,7 @@ class BKDipole:
             return 1.0 
         
         if 0 <= r < r_min and 0 <= Y <= Y_max: # small r, Y within limits
-            return 0.0
+            return 0.0 #+ 1e-200
 
         N = self.interpolator(Y, r)
 
@@ -103,7 +103,17 @@ class BKDipole:
         '''
         Log N(Y,r) over array of r values
         '''
+    
+        logN_values = np.ones(len(r_values))
+        i = 0
+        for r in r_values:
+            N = self.N(Y, r)
+            if logN_values[i] == 0.0:
+                logN_values[i] = 0.0
+            else:
+                logN_values[i] = np.log(N)
+            i += 1
 
-        N_values = [np.log(self.N(Y, r)) for r in r_values]
-        return np.array(N_values)
+        #N_values = [np.log(self.N(Y, r)) for r in r_values]
+        return np.array(logN_values)
 

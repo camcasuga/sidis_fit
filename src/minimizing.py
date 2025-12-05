@@ -29,7 +29,7 @@ class MyMinimizer:
         if self.lbounds is not None and self.ubounds is not None:
             for i in range(4):
                 if theta[i] < self.lbounds[i] or theta[i] > self.ubounds[i]:
-                    return 99999. * np.ones_like(r)
+                    return np.inf #99999. * np.ones_like(r)
 
         return np.array([np.log(self.Ff(ri, theta)) for ri in r])
     
