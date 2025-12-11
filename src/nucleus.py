@@ -111,6 +111,8 @@ def main(dipoles_dir):
         bk_file = os.path.join(dipoles_dir, fname)
         interpolator = dipole.BKDipole(bk_file)
         Nyr = lambda y, r: interpolator.ln_Nr(y,r)
+        initial_params = [ic_qs[0], 1.0, ic_ec[0], 1.0]
+        initial_params[0] = 197 * get_TA(b, A) * ic_sigma02[0] * conv_mbGeV2 * ic_qs[0]
         log_k_all = []
         log_Sk2_all = []
         j = 0
@@ -119,11 +121,16 @@ def main(dipoles_dir):
             minimizer = minimizing.MyMinimizer(Nyr, y, r_grid, initial_guess, lbounds=lbounds, ubounds=ubounds)
             out = minimizer.fit_ls()
             fit_params[j,:] = out.x
+
             if y == 0:
-                fit_params[j, :] = [ic_qs[0], 1.0, ic_ec[0], 1.0]
-                fit_params[j, 0] = 197 * get_TA(b, A) * ic_sigma02[0] * conv_mbGeV2 * ic_qs[0]
-            print(f'y = {y},  params = {fit_params[j,:]}')
+                fit_params[j, :] = initial_params
+            
             log_Sk2 = log_S2(minimizer, 10**log_k_grid, fit_params[j,:])
+            if np.isnan(log_Sk2).any():
+                fit_params[j, :] = initial_params
+                log_Sk2 = log_S2(minimizer, 10**log_k_grid, fit_params[j,:])
+            
+            print(f'y = {y},  params = {fit_params[j,:]}')
             log_k_all.extend(log_k_grid)
             log_Sk2_all.extend(log_Sk2)
             j += 1
@@ -140,7 +147,8 @@ def main(dipoles_dir):
             #     for j in range(y_grid_size):
             #         file_params.write("{: .6e} {: .6e} {: .6e} {: .6e} {: .6e}\n".format(y_grid[j], fit_params[j,0], fit_params[j,1], fit_params[j,2], fit_params[j,3]))
     
-    csv_file = 'BKfit_Sk_wb_data.csv'
+    #csv_file = 'BKfit_Sk_wb_data.csv'
+    csv_file = 'BKfit_Sk_wb_data_nonans.csv'
     comments = [f'## Fitted to BK evolved dipoles with initial condition: MVe model, Q_s0^2 = {ic_qs[0]} GeV^2, \gamma = 1, coefficient of E inside Log is {ic_ec[0]}',                  
                     f'## Other initial condition parameters: proton transverse area (sigma0/2) is {ic_sigma02[0]} mb and running coupling parameter (C^2) is {ic_c2[0]}',
                     f'## Note definition of log S(k): log_S(k) = log10 S(k) = log10 [ \int r dr J0(k r) (1 - N(r)) ]',
