@@ -18,7 +18,7 @@ def main(dipoles_dir):
     y_grid_size = 100 # divisions of rapidity grid
     y_max = 8.0
     y_grid = np.linspace(0, y_max, y_grid_size)
-    r_grid = np.logspace(-3, 2, 200) # dipole size logspace 
+    r_grid = np.logspace(-2, 2, 200) # dipole size logspace 
 
     # load initial condition parameters
     ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt("data/posteriorsamples_100_LOmvefit.dat", unpack = True)
