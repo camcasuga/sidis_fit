@@ -91,7 +91,6 @@ def main(dipoles_dir):
     y_grid = np.linspace(0, y_max, y_grid_size)
     r_grid = np.logspace(-2, 2, 200) # dipole size logspace 
     b_grid = range(0, 33, 2)
-    print("b_grid", b_grid)
     log_k_min = -2
     log_k_max = 2
     k_grid_size = 500
@@ -106,7 +105,7 @@ def main(dipoles_dir):
         #fname in enumerate(bk_folder_list): # for each posterior sample
         fname = f"ic_197_{b}.dat"
         fit_params = np.ones((y_grid_size,4))
-        print(b, fname)
+        #print(b, fname)
         #file_params = open(f"fit_params/{i}.dat", "w")
         bk_file = os.path.join(dipoles_dir, fname)
         interpolator = dipole.BKDipole(bk_file)
@@ -116,7 +115,7 @@ def main(dipoles_dir):
         log_k_all = []
         log_Sk2_all = []
         j = 0
-        print("b value", b)
+        #print("b value", b)
         for y in y_grid:
             minimizer = minimizing.MyMinimizer(Nyr, y, r_grid, initial_guess, lbounds=lbounds, ubounds=ubounds)
             out = minimizer.fit_ls()
@@ -127,10 +126,11 @@ def main(dipoles_dir):
             
             log_Sk2 = log_S2(minimizer, 10**log_k_grid, fit_params[j,:])
             if np.isnan(log_Sk2).any():
+                print(f"Nan values in log S(k) for b = {b} and y = {y}")
                 fit_params[j, :] = initial_params
                 log_Sk2 = log_S2(minimizer, 10**log_k_grid, fit_params[j,:])
             
-            print(f'y = {y},  params = {fit_params[j,:]}')
+            #print(f'y = {y},  params = {fit_params[j,:]}')
             log_k_all.extend(log_k_grid)
             log_Sk2_all.extend(log_Sk2)
             j += 1
