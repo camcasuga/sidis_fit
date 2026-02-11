@@ -73,7 +73,7 @@ def dipA(r, bt, A, Qs02, gamma, e_c, sigma0_2): # dipole nucleus
     #print(TA)
     return N
 
-def main(dipoles_dir):
+def main(n, dipoles_dir):
 
     ''' 
     
@@ -104,6 +104,7 @@ def main(dipoles_dir):
     for b in b_grid: 
         #fname in enumerate(bk_folder_list): # for each posterior sample
         fname = f"ic_197_{b}.dat"
+        print(f"Reading BK datafile:  {fname}" )
         fit_params = np.ones((y_grid_size,4))
         #print(b, fname)
         #file_params = open(f"fit_params/{i}.dat", "w")
@@ -115,8 +116,9 @@ def main(dipoles_dir):
         log_k_all = []
         log_Sk2_all = []
         j = 0
-        #print("b value", b)
+
         for y in y_grid:
+            print(f"Rapidity: {j+1}/{y_grid_size}")
             minimizer = minimizing.MyMinimizer(Nyr, y, r_grid, initial_guess, lbounds=lbounds, ubounds=ubounds)
             out = minimizer.fit_ls()
             fit_params[j,:] = out.x
@@ -139,18 +141,22 @@ def main(dipoles_dir):
         data = pd.DataFrame({'b': b_repeat, 'y': y_array_repeat, 'log10_k':log_k_all, 'log10_S(k)':log_Sk2_all})
         all_data = pd.concat([all_data, data])
 
-            # while file_params:
-            #     file_params.write(f"# Parameter file of fit of dipole from {bk_file}" + "\n")
-            #     file_params.write('# Dipoles / cross section generated with initial condition: MV model, Qs0^2 = {: .6e}, e_c = {: .6e}, C^2 = {: .6e}, sigma0/2 = {: .6e}'.format(ic_qs[0], ic_ec[0], ic_c2[0], ic_sigma02[0]))
-            #     file_params.write(f"# y ranges from 0 to {y_max} in {y_grid_size} steps" + "\n")
-            #     file_params.write("# Columns: y, Qs2, gamma, ec, p" + "\n")
-            #     for j in range(y_grid_size):
-            #         file_params.write("{: .6e} {: .6e} {: .6e} {: .6e} {: .6e}\n".format(y_grid[j], fit_params[j,0], fit_params[j,1], fit_params[j,2], fit_params[j,3]))
-    
-    #csv_file = 'BKfit_Sk_wb_data.csv'
-    csv_file = 'BKfit_Sk_wb_data_nonans.csv'
-    comments = [f'## Fitted to BK evolved dipoles with initial condition: MVe model, Q_s0^2 = {ic_qs[0]} GeV^2, \gamma = 1, coefficient of E inside Log is {ic_ec[0]}',                  
-                    f'## Other initial condition parameters: proton transverse area (sigma0/2) is {ic_sigma02[0]} mb and running coupling parameter (C^2) is {ic_c2[0]}',
+        file_params = f"../data/nucleus/fit_params/sample{n}_ip{int(b)}.dat"
+        file_params_comments = [f"# Parameter file of fit of dipole from {bk_file}",
+                                        '# Dipoles / cross section generated with initial condition: MV model, Qs0^2 = {: .6e}, e_c = {: .6e}, C^2 = {: .6e}, sigma0/2 = {: .6e}'.format(ic_qs[i], ic_ec[i], ic_c2[i], ic_sigma02[i]),
+                                        f"# y ranges from 0 to {y_max} in {y_grid_size} steps" ,
+                                        "# Columns: y, Qs2, gamma, ec, p" ]
+        
+        with open(file_params, 'w') as f:
+            for comment in file_params_comments:
+                f.write(comment + '\n')
+            for l in range(y_grid_size):
+                f.write("{: .6e} {: .6e} {: .6e} {: .6e} {: .6e}\n".format(y_grid[l], fit_params[l,0], fit_params[l,1], fit_params[l,2], fit_params[l,3]))
+
+
+    csv_file = f'../data/nucleus/Sk_fit/2dft_{n}.csv'
+    comments = [f'## Fitted to BK evolved dipoles with initial condition: MVe model, Q_s0^2 = {ic_qs[n]} GeV^2, \gamma = 1, coefficient of E inside Log is {ic_ec[n]}',                  
+                    f'## Other initial condition parameters: proton transverse area (sigma0/2) is {ic_sigma02[n]} mb and running coupling parameter (C^2) is {ic_c2[n]}',
                     f'## Note definition of log S(k): log_S(k) = log10 S(k) = log10 [ \int r dr J0(k r) (1 - N(r)) ]',
                     f'## log10_k grid ranges from {log_k_min} to {log_k_max} with {k_grid_size} points',
                     f'## y grid ranges from 0 to {y_max} with {y_grid_size} points',
@@ -161,9 +167,15 @@ def main(dipoles_dir):
             f.write(comment + '\n')
 
     all_data.to_csv(csv_file, index=False, sep = ' ', columns=['b', 'y', 'log10_k', 'log10_S(k)'], mode='a', float_format='%.6e')
-        
-    # all_data.to_csv('BKfit_Sk_data.csv', index = False)
 
             
 if __name__ == "__main__":
-    main("../data/nucleus/0")
+    n_samples = 2
+    for i in range(n_samples):
+        dipoles_dir = f"../data/nucleus/posterior/{i}"
+        print(f"Reading directory:  {dipoles_dir}" )
+        main(i, dipoles_dir)
+
+    # i = sys.argv[1]
+    # dipoles_dir = sys.argv[2]
+    # main(i, dipoles_dir)
