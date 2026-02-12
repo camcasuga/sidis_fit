@@ -18,7 +18,7 @@ class BKDipole:
         Returns an interpolator for the dipole: N(Y, r), where r is in GeV^-1, 
         and Y is the evolution rapidity
         '''
-
+        print("Reading BK file:", self.bkfile)
         with open(self.bkfile) as f:
             content = f.read().split("###")
         
