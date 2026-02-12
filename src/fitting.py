@@ -19,6 +19,13 @@ def main(dipoles_dir):
     y_max = 8.0
     y_grid = np.linspace(0, y_max, y_grid_size)
     r_grid = np.logspace(-2, 2, 200) # dipole size logspace 
+    log_k_min = -2
+    log_k_max = 2
+    k_grid_size = 500
+    log_k_grid = np.linspace(log_k_min, log_k_max, k_grid_size)
+    log_k_all = []
+    log_Sk2_all = 0
+    y_array_repeat = np.repeat(y_grid, k_grid_size)
 
     # load initial condition parameters
     ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt("data/posteriorsamples_100_LOmvefit.dat", unpack = True)
@@ -31,12 +38,17 @@ def main(dipoles_dir):
         file_params = open(f"fit_params/{i}.dat", "w")
         interpolator = dipole.BKDipole(bk_file)
         Nyr = lambda y, r: interpolator.ln_Nr(y,r)
-        i = 0
+
+        j = 0
         for y in y_grid:
             minimizer = minimizing.MyMinimizer(Nyr, y, r_grid, initial_guess, lbounds=lbounds, ubounds=ubounds, lsmethod='trf')
             out = minimizer.fit_ls()
-            fit_params[i,:] = out.x
-            i += 1
+            fit_params[j,:] = out.x
+
+            log_Sk2 = log_S2(minimizer, 10**log_k_grid, fit_params[j,:] )
+            log_k_all.extend(log_k_grid)
+            log_Sk2_all.extend(log_Sk2)
+            j += 1
 
         while file_params:
             file_params.write(f"# Parameter file of fit of dipole from {bk_file}" + "\n")
@@ -46,6 +58,20 @@ def main(dipoles_dir):
             for j in range(y_grid_size):
                 file_params.write("{: .6e} {: .6e} {: .6e} {: .6e} {: .6e}\n".format(y_grid[j], fit_params[j,0], fit_params[j,1], fit_params[j,2], fit_params[j,3]))
 
+        
+        data = {'y': y_array_repeat, 'log10_k':log_k_all, 'log10_S(k)':log_Sk2_all}
+        df = pd.DataFrame(data)
+        csv_file = "Sk_{i}.csv"
 
-        # now for the 2dft of the dipole, for different rapidities and kt
+        comments = ['## Generated from BK dipole with initial condition: MVe model, Q_s0^2 = 0.0544245 GeV^2, \gamma = 1, coefficient of E inside Log is 58.5321',
+                   f'## Fitted to file {bk_file}',
+                   '## Note definition of log S(k): log_S(k) = log10 S(k) = log10 [ \int r dr J0(k r) (1 - N(r)) ]',
+                   f'## log10 k grid ranges from {log_k_min} to {log_k_max} with {k_grid_size} points',
+                   f'## y grid ranges from 0 to {y_max} with {y_grid_size} points',]
+        
+        with open(csv_file, 'w') as f:
+            for comment in comments:
+                f.write(comment + '\n')
+        
+        df.to_csv(csv_file, index=False, sep = ' ', columns=['y', 'log10_k', 'log10_S(k)'], mode = 'a', float_format = '%.6e')       
 
