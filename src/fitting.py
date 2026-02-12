@@ -1,6 +1,7 @@
 import dipole
 import minimizing
 import numpy as np
+from nucleus import *
 
 def main(dipoles_dir):
     ''' 
@@ -13,9 +14,9 @@ def main(dipoles_dir):
 
     lbounds = [0.001, 0.1, 1/np.exp(1), 0.001]
     ubounds = [10.0, 100.1, 100.0, 10.0]
-    initial_guess =  [1.0, 0.8, 1.0, 1.0]
+    initial_guess =  [1.0, 0.6, 1.0, 1.0]
     param_names = ['Qs2', 'gamma', 'ec', 'p']
-    y_grid_size = 100 # divisions of rapidity grid
+    y_grid_size = 100 # 100 # divisions of rapidity grid
     y_max = 8.0
     y_grid = np.linspace(0, y_max, y_grid_size)
     r_grid = np.logspace(-2, 2, 200) # dipole size logspace 
@@ -28,19 +29,23 @@ def main(dipoles_dir):
     y_array_repeat = np.repeat(y_grid, k_grid_size)
 
     # load initial condition parameters
-    ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt("data/posteriorsamples_100_LOmvefit.dat", unpack = True)
-
+    ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt("../data/dipole/posteriorsamples_100_LOmvefit.dat", unpack = True)
     for i, fname in enumerate(bk_folder_list): # for each posterior sample
+        # skip first 20 files
+        if i < 91:
+            continue
+
         print(f"Reading file: {i+1}/{len(bk_folder_list)}")
         bk_file = os.path.join(dipoles_dir, fname)
-        
-        fit_params = np.ones(y_grid_size,4)
-        file_params = open(f"fit_params/{i}.dat", "w")
+        fit_params = np.ones((y_grid_size,4))
+        file_params = f"../data/dipole/fit_params/{i}.dat"
         interpolator = dipole.BKDipole(bk_file)
         Nyr = lambda y, r: interpolator.ln_Nr(y,r)
-
+        log_k_all = []
+        log_Sk2_all = []
         j = 0
         for y in y_grid:
+            print(f"{j+1}/{y_grid_size}")
             minimizer = minimizing.MyMinimizer(Nyr, y, r_grid, initial_guess, lbounds=lbounds, ubounds=ubounds, lsmethod='trf')
             out = minimizer.fit_ls()
             fit_params[j,:] = out.x
