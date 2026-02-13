@@ -5,6 +5,7 @@ import os
 from hankel import HankelTransform
 import pandas as pd
 from scipy import integrate
+import multiprocessing
 
 lambda_qcd = 0.241 #GeV
 conv_fmGeV = 5.068 # fm to GeV^-1
@@ -73,14 +74,19 @@ def dipA(r, bt, A, Qs02, gamma, e_c, sigma0_2): # dipole nucleus
     #print(TA)
     return N
 
-def main(n, dipoles_dir):
+def init_pool_processes(the_lock):
+    global lock
+    lock = the_lock
+
+def main(i):
 
     ''' 
     
     Loops through all BK-evolved dipoles inside dipoles_dir (each with a corresponding) and optimizes the hyperparameters in form: N(r) = 1 - exp()^gamma. Solves for 2DFT: log_S(k) = log10 S(k) = log10 [ \int r dr J0(k r) ]
     
     '''
-
+    dipoles_dir = f"../data/nucleus/posterior/{i}"
+    #print(f"Reading directory:  {dipoles_dir}" )
     bk_folder_list = [f for f in os.listdir(dipoles_dir) if f.endswith('.dat')]
     lbounds = [0.001, 0.1, 1/np.exp(1), 0.001]
     ubounds = [10.0, 100.0, 100.0, 10.0]
@@ -100,11 +106,11 @@ def main(n, dipoles_dir):
     #load initial condition parameters
     ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt("../data/dipole/posteriorsamples_100_LOmvefit.dat", unpack = True)
     all_data = pd.DataFrame(columns = ['b', 'y', 'log10_k', 'log10_S(k)'])
-    
+    #lock.acquire()
     for b in b_grid: 
         #fname in enumerate(bk_folder_list): # for each posterior sample
         fname = f"ic_197_{b}.dat"
-        print(f"Reading BK datafile:  {fname}" )
+        #print(f"Reading BK datafile:  {fname}" )
         fit_params = np.ones((y_grid_size,4))
         #print(b, fname)
         #file_params = open(f"fit_params/{i}.dat", "w")
@@ -118,7 +124,7 @@ def main(n, dipoles_dir):
         j = 0
 
         for y in y_grid:
-            print(f"Rapidity: {j+1}/{y_grid_size}")
+            print(f"Rapidity: {j+1}/{y_grid_size} for b = {b} in {dipoles_dir}")
             minimizer = minimizing.MyMinimizer(Nyr, y, r_grid, initial_guess, lbounds=lbounds, ubounds=ubounds)
             out = minimizer.fit_ls()
             fit_params[j,:] = out.x
@@ -143,7 +149,7 @@ def main(n, dipoles_dir):
 
         file_params = f"../data/nucleus/fit_params/sample{n}_ip{int(b)}.dat"
         file_params_comments = [f"# Parameter file of fit of dipole from {bk_file}",
-                                        '# Dipoles / cross section generated with initial condition: MV model, Qs0^2 = {: .6e}, e_c = {: .6e}, C^2 = {: .6e}, sigma0/2 = {: .6e}'.format(ic_qs[i], ic_ec[i], ic_c2[i], ic_sigma02[i]),
+                                        '# Dipoles / cross section generated with initial condition: MV model, Qs0^2 = {: .6e}, e_c = {: .6e}, C^2 = {: .6e}, sigma0/2 = {: .6e}'.format(ic_qs[n], ic_ec[n], ic_c2[n], ic_sigma02[n]),
                                         f"# y ranges from 0 to {y_max} in {y_grid_size} steps" ,
                                         "# Columns: y, Qs2, gamma, ec, p" ]
         
@@ -154,9 +160,9 @@ def main(n, dipoles_dir):
                 f.write("{: .6e} {: .6e} {: .6e} {: .6e} {: .6e}\n".format(y_grid[l], fit_params[l,0], fit_params[l,1], fit_params[l,2], fit_params[l,3]))
 
 
-    csv_file = f'../data/nucleus/Sk_fit/2dft_{n}.csv'
-    comments = [f'## Fitted to BK evolved dipoles with initial condition: MVe model, Q_s0^2 = {ic_qs[n]} GeV^2, \gamma = 1, coefficient of E inside Log is {ic_ec[n]}',                  
-                    f'## Other initial condition parameters: proton transverse area (sigma0/2) is {ic_sigma02[n]} mb and running coupling parameter (C^2) is {ic_c2[n]}',
+    csv_file = f'../data/nucleus/Sk_fit/2dft_{i}.csv'
+    comments = [f'## Fitted to BK evolved dipoles with initial condition: MVe model, Q_s0^2 = {ic_qs[i]} GeV^2, \gamma = 1, coefficient of E inside Log is {ic_ec[i]}',                  
+                    f'## Other initial condition parameters: proton transverse area (sigma0/2) is {ic_sigma02[i]} mb and running coupling parameter (C^2) is {ic_c2[i]}',
                     f'## Note definition of log S(k): log_S(k) = log10 S(k) = log10 [ \int r dr J0(k r) (1 - N(r)) ]',
                     f'## log10_k grid ranges from {log_k_min} to {log_k_max} with {k_grid_size} points',
                     f'## y grid ranges from 0 to {y_max} with {y_grid_size} points',
@@ -171,10 +177,19 @@ def main(n, dipoles_dir):
             
 if __name__ == "__main__":
     n_samples = 2
-    for i in range(n_samples):
-        dipoles_dir = f"../data/nucleus/posterior/{i}"
-        print(f"Reading directory:  {dipoles_dir}" )
-        main(i, dipoles_dir)
+    n = range(n_samples)
+    threads = 4
+    lock = multiprocessing.Lock()
+    # with multiprocessing.Pool(threads, init_pool_processes, (lock,)) as pool:
+    #     pool.map(main, n)
+
+    with multiprocessing.Pool(threads) as pool:
+        pool.map(main, n)
+
+    # for i in range(n_samples):
+    #     dipoles_dir = f"../data/nucleus/posterior/{i}"
+    #     print(f"Reading directory:  {dipoles_dir}" )
+    #     main(i, dipoles_dir)
 
     # i = sys.argv[1]
     # dipoles_dir = sys.argv[2]
