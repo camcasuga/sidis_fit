@@ -92,7 +92,7 @@ def main(i):
     ubounds = [10.0, 100.0, 100.0, 10.0]
     initial_guess =  [1.0, 1.0, 1.0, 1.0]
     param_names = ['Qs2', 'gamma', 'ec', 'p']
-    y_grid_size = 100 # divisions of rapidity grid
+    y_grid_size = 10 #100 # divisions of rapidity grid
     y_max = 8.0
     y_grid = np.linspace(0, y_max, y_grid_size)
     r_grid = np.logspace(-2, 2, 200) # dipole size logspace 
@@ -147,9 +147,9 @@ def main(i):
         data = pd.DataFrame({'b': b_repeat, 'y': y_array_repeat, 'log10_k':log_k_all, 'log10_S(k)':log_Sk2_all})
         all_data = pd.concat([all_data, data])
 
-        file_params = f"../data/nucleus/fit_params/sample{n}_ip{int(b)}.dat"
+        file_params = f"../data/nucleus/fit_params/sample{i}_ip{int(b)}.dat"
         file_params_comments = [f"# Parameter file of fit of dipole from {bk_file}",
-                                        '# Dipoles / cross section generated with initial condition: MV model, Qs0^2 = {: .6e}, e_c = {: .6e}, C^2 = {: .6e}, sigma0/2 = {: .6e}'.format(ic_qs[n], ic_ec[n], ic_c2[n], ic_sigma02[n]),
+                                        '# Dipoles / cross section generated with initial condition: MV model, Qs0^2 = {: .6e}, e_c = {: .6e}, C^2 = {: .6e}, sigma0/2 = {: .6e}'.format(ic_qs[i], ic_ec[i], ic_c2[i], ic_sigma02[i]),
                                         f"# y ranges from 0 to {y_max} in {y_grid_size} steps" ,
                                         "# Columns: y, Qs2, gamma, ec, p" ]
         
@@ -176,7 +176,7 @@ def main(i):
 
             
 if __name__ == "__main__":
-    n_samples = 2
+    n_samples = 10
     n = range(n_samples)
     threads = 4
     lock = multiprocessing.Lock()

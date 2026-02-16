@@ -62,7 +62,7 @@ def main(sk_files_dir, y_vals):
 
 if __name__ == "__main__":
 
-    " Run code as: python3 src/plot_Skband.py y1 y2 y3, i.e. pass as any rapidities as you want"
+    " Run code as: python3 src/plot_Skband.py y1 y2 y3, i.e. pass as many rapidities as you want"
     
     y = np.zeros(len(sys.argv)-1)
     for n in range(1, len(sys.argv)):
