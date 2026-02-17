@@ -117,8 +117,8 @@ def main(i):
         bk_file = os.path.join(dipoles_dir, fname)
         interpolator = dipole.BKDipole(bk_file)
         Nyr = lambda y, r: interpolator.ln_Nr(y,r)
-        initial_params = [ic_qs[0], 1.0, ic_ec[0], 1.0]
-        initial_params[0] = 197 * get_TA(b, A) * ic_sigma02[0] * conv_mbGeV2 * ic_qs[0]
+        initial_params = [ic_qs[i], 1.0, ic_ec[i], 1.0]
+        initial_params[0] = 197 * get_TA(b, A) * ic_sigma02[i] * conv_mbGeV2 * ic_qs[i]
         log_k_all = []
         log_Sk2_all = []
         j = 0
