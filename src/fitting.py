@@ -14,7 +14,7 @@ def main(dipoles_dir):
 
     lbounds = [0.001, 0.1, 1/np.exp(1), 0.001]
     ubounds = [10.0, 100.1, 100.0, 10.0]
-    initial_guess =  [1.0, 0.9, 1.0, 1.0]
+    initial_guess =  [1.0, 0.4, 1.0, 1.0]
     param_names = ['Qs2', 'gamma', 'ec', 'p']
     y_grid_size = 100 # 100 # divisions of rapidity grid
     y_max = 8.0
@@ -26,7 +26,7 @@ def main(dipoles_dir):
 
     # load initial condition parameters
     ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt("../data/dipole/posteriorsamples_100_LOmvefit.dat", unpack = True)
-    file_index = range(14, 100)
+    file_index = range(68, 100)
     for i in file_index: # for each posterior sample
 
         fname = f"{i}.dat"
