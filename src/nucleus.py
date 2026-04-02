@@ -29,7 +29,7 @@ def log_S2(minimizer, k, fit_params):
     ht = HankelTransform(nu = 0, N = 1000, h = 0.001)
 
     def func_to_ht(r):
-        f = minimizer.Ff(r, fit_params)
+        f = minimizer.Ff(r, fit_params[0], fit_params[1], fit_params[2], fit_params[3])
         f = np.nan_to_num(f, nan=1.0)
         return 1 - f
 
@@ -40,7 +40,7 @@ def S2(minimizer, k, fit_params):
     ht = HankelTransform(nu = 0, N = 1000, h = 0.001)
 
     def func_to_ht(r):
-        f = minimizer.Ff(r, fit_params)
+        f = minimizer.Ff(r, fit_params[0], fit_params[1], fit_params[2], fit_params[3])
         f = np.nan_to_num(f, nan=1.0)
         return 1 - f
 
@@ -85,18 +85,19 @@ def main(i):
     Loops through all BK-evolved dipoles inside dipoles_dir (each with a corresponding) and optimizes the hyperparameters in form: N(r) = 1 - exp()^gamma. Solves for 2DFT: log_S(k) = log10 S(k) = log10 [ \int r dr J0(k r) ]
     
     '''
-    dipoles_dir = f"../data/nucleus/posterior/{i}"
+    main_dir = "/home/caaucasu/sidis_fit/data/hm2013"
+    dipoles_dir = os.path.join(main_dir,"Au/bk")
     #print(f"Reading directory:  {dipoles_dir}" )
     bk_folder_list = [f for f in os.listdir(dipoles_dir) if f.endswith('.dat')]
     lbounds = [0.001, 0.1, 1/np.exp(1), 0.001]
     ubounds = [10.0, 100.0, 100.0, 10.0]
     initial_guess =  [1.0, 1.0, 1.0, 1.0]
     param_names = ['Qs2', 'gamma', 'ec', 'p']
-    y_grid_size = 10 #100 # divisions of rapidity grid
+    y_grid_size = 100 #100 # divisions of rapidity grid
     y_max = 8.0
     y_grid = np.linspace(0, y_max, y_grid_size)
-    r_grid = np.logspace(-2, 2, 200) # dipole size logspace 
-    b_grid = range(0, 33, 2)
+    r_grid = np.logspace(-2, 2, 100) # dipole size logspace 
+    b_grid = range(0, 41, 2)
     log_k_min = -2
     log_k_max = 2
     k_grid_size = 500
@@ -104,12 +105,12 @@ def main(i):
     y_array_repeat = np.repeat(y_grid, k_grid_size)
 
     #load initial condition parameters
-    ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt("../data/dipole/posteriorsamples_100_LOmvefit.dat", unpack = True)
+    ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt(os.path.join(main_dir,"mv_param.dat"), unpack = True)
     all_data = pd.DataFrame(columns = ['b', 'y', 'log10_k', 'log10_S(k)'])
     #lock.acquire()
     for b in b_grid: 
         #fname in enumerate(bk_folder_list): # for each posterior sample
-        fname = f"ic_197_{b}.dat"
+        fname = f"glauber_mv1_{b}"
         #print(f"Reading BK datafile:  {fname}" )
         fit_params = np.ones((y_grid_size,4))
         #print(b, fname)
@@ -117,8 +118,12 @@ def main(i):
         bk_file = os.path.join(dipoles_dir, fname)
         interpolator = dipole.BKDipole(bk_file)
         Nyr = lambda y, r: interpolator.ln_Nr(y,r)
-        initial_params = [ic_qs[i], 1.0, ic_ec[i], 1.0]
-        initial_params[0] = 197 * get_TA(b, A) * ic_sigma02[i] * conv_mbGeV2 * ic_qs[i]
+        initial_params = [ic_qs, 1.0, ic_ec, 1.0]
+        initial_params[0] = 197 * get_TA(b, A) * ic_sigma02 * conv_mbGeV2 * ic_qs
+        #  use when looping over posterior samples
+        # initial_params = [ic_qs[i], 1.0, ic_ec[i], 1.0]
+        # initial_params[0] = 197 * get_TA(b, A) * ic_sigma02[i] * conv_mbGeV2 * ic_qs[i]
+        print("initial qs02", initial_params[0])
         log_k_all = []
         log_Sk2_all = []
         j = 0
@@ -147,9 +152,10 @@ def main(i):
         data = pd.DataFrame({'b': b_repeat, 'y': y_array_repeat, 'log10_k':log_k_all, 'log10_S(k)':log_Sk2_all})
         all_data = pd.concat([all_data, data])
 
-        file_params = f"../data/nucleus/fit_params/sample{i}_ip{int(b)}.dat"
+        file_name = f"Au/fit_params/ip{int(b)}.dat"
+        file_params = os.path.join(main_dir, file_name)
         file_params_comments = [f"# Parameter file of fit of dipole from {bk_file}",
-                                        '# Dipoles / cross section generated with initial condition: MV model, Qs0^2 = {: .6e}, e_c = {: .6e}, C^2 = {: .6e}, sigma0/2 = {: .6e}'.format(ic_qs[i], ic_ec[i], ic_c2[i], ic_sigma02[i]),
+                                        '# Dipoles / cross section generated with initial condition: MV model, Qs0^2 = {: .6e}, e_c = {: .6e}, C^2 = {: .6e}, sigma0/2 = {: .6e}'.format(ic_qs, ic_ec, ic_c2, ic_sigma02),
                                         f"# y ranges from 0 to {y_max} in {y_grid_size} steps" ,
                                         "# Columns: y, Qs2, gamma, ec, p" ]
         
@@ -160,13 +166,14 @@ def main(i):
                 f.write("{: .6e} {: .6e} {: .6e} {: .6e} {: .6e}\n".format(y_grid[l], fit_params[l,0], fit_params[l,1], fit_params[l,2], fit_params[l,3]))
 
 
-    csv_file = f'../data/nucleus/Sk_fit/2dft_{i}.csv'
-    comments = [f'## Fitted to BK evolved dipoles with initial condition: MVe model, Q_s0^2 = {ic_qs[i]} GeV^2, \gamma = 1, coefficient of E inside Log is {ic_ec[i]}',                  
-                    f'## Other initial condition parameters: proton transverse area (sigma0/2) is {ic_sigma02[i]} mb and running coupling parameter (C^2) is {ic_c2[i]}',
+    csv_filename = f'Au/Sk_fit/2Dft_{i}.csv'
+    csv_file = os.path.join(main_dir, csv_filename)
+    comments = [f'## Fitted to BK evolved dipoles with initial condition: MVe model, Q_s0^2 = {ic_qs} GeV^2, \gamma = 1, coefficient of E inside Log is {ic_ec}',                  
+                    f'## Other initial condition parameters: proton transverse area (sigma0/2) is {ic_sigma02} mb and running coupling parameter (C^2) is {ic_c2}',
                     f'## Note definition of log S(k): log_S(k) = log10 S(k) = log10 [ \int r dr J0(k r) (1 - N(r)) ]',
                     f'## log10_k grid ranges from {log_k_min} to {log_k_max} with {k_grid_size} points',
                     f'## y grid ranges from 0 to {y_max} with {y_grid_size} points',
-                    f'## Impact parameter values, b, ranges from 0 to 32 GeV^-1']
+                    f'## Impact parameter values, b, ranges from 0 to 40 GeV^-1']
 
     with open(csv_file, 'w') as f:
         for comment in comments:
@@ -176,15 +183,15 @@ def main(i):
 
             
 if __name__ == "__main__":
-    n_samples = 10
-    n = range(n_samples)
-    threads = 4
-    lock = multiprocessing.Lock()
-    # with multiprocessing.Pool(threads, init_pool_processes, (lock,)) as pool:
-    #     pool.map(main, n)
+    # n_samples = 10
+    # n = range(n_samples)
+    # threads = 4
+    # lock = multiprocessing.Lock()
+    # # with multiprocessing.Pool(threads, init_pool_processes, (lock,)) as pool:
+    # #     pool.map(main, n)
 
-    with multiprocessing.Pool(threads) as pool:
-        pool.map(main, n)
+    # with multiprocessing.Pool(threads) as pool:
+    #     pool.map(main, n)
 
     # for i in range(n_samples):
     #     dipoles_dir = f"../data/nucleus/posterior/{i}"
@@ -193,4 +200,4 @@ if __name__ == "__main__":
 
     # i = sys.argv[1]
     # dipoles_dir = sys.argv[2]
-    # main(i, dipoles_dir)
+    main(0)

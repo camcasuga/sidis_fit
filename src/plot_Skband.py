@@ -21,14 +21,17 @@ def Sk_interp(sk_file):
 
 def main(sk_files_dir, y_vals):
     #sk_files_dir_list = [f for f in os.listdir(sk_files_dir)]
-    sk_files_dir_list = glob.glob(sk_files_dir + "/*.csv")
-    sk_files_dir_list.sort()
+    # sk_files_dir_list = glob.glob(sk_files_dir + "/*.csv")
+    # sk_files_dir_list.sort()
     
     interpolators = []
-    for sk_file in sk_files_dir_list:
+    for i in range(100):
+        sk_file = os.path.join(sk_files_dir, f"2Dft_{i}.csv")
         print(f"Reading file: {sk_file}")
         interpolators.append(Sk_interp(sk_file))
-    
+
+    parameter_file = "/home/caaucasu/sidis_fit/data/dipole/posteriorsamples_100_LOmvefit.dat"
+    sigma02 = np.loadtxt(parameter_file, usecols=3)
     k_values = 100
     log_k_grid = np.linspace(-2, 2, k_values)
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
@@ -42,12 +45,12 @@ def main(sk_files_dir, y_vals):
 
         i = 0
         for log_k in log_k_grid:
-            log_SK = np.array([interpolator(y_val, log_k) for interpolator in interpolators])
-            mean[i] = np.mean(log_SK)
-            lower_region = log_SK < mean[i]
-            upper_region = log_SK > mean[i]
-            up_sd[i] = np.std(log_SK[upper_region])
-            down_sd[i] = np.std(log_SK[lower_region])
+            log_SK = np.array([10**(interpolators[a](y_val, log_k))*sigma02[a] for a in range(100)])
+            mean[i] = np.mean(log_SK)/np.mean(log_SK)
+            lower_region = log_SK < np.mean(log_SK)
+            upper_region = log_SK > np.mean(log_SK)
+            up_sd[i] = np.std(log_SK[upper_region])/np.mean(log_SK)
+            down_sd[i] = np.std(log_SK[lower_region])/np.mean(log_SK)
             i += 1
 
         ax.plot(log_k_grid, mean, label=f'y = {y_val}', color=colors[j])
@@ -57,8 +60,9 @@ def main(sk_files_dir, y_vals):
 
     ax.legend()
     ax.set_xlabel('log10(k)')
-    ax.set_ylabel('log10(S(k))')
-    fig.savefig("plots/logsk_fory_proton.pdf", dpi=300)
+    ax.set_yscale('log')
+    ax.set_ylabel('(S(k))*sigma0/2')
+    fig.savefig("plots/logsk_fory_proton_sigma02.pdf", dpi=300)
 
 if __name__ == "__main__":
 

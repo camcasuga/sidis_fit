@@ -86,6 +86,9 @@ class BKDipole:
 
         N = self.interpolator(Y, r)
 
+        if N > 1.0:
+            return 1.0
+
         return N
 
     def Nr(self, Y, r_values): #r_min = 1e-3, r_max = 1e2, r_points = 50):
