@@ -117,7 +117,7 @@ def main(i):
     ubounds = [10.0, 100.0, 100.0, 10.0]
     initial_guess =  [1.0, 1.0, 1.0, 1.0]
     param_names = ['Qs2', 'gamma', 'ec', 'p']
-    y_grid_size = 5 #100 # divisions of rapidity grid
+    y_grid_size = 100 # divisions of rapidity grid
     y_max = 8.0
     y_grid = np.linspace(0, y_max, y_grid_size)
     rqs_grid = np.logspace(-3, 2, 100) # dipole size logspace 
@@ -171,7 +171,7 @@ def main(i):
             log_Sk2 = log_S2(minimizer, 10**log_k_grid, fit_params[j,:])
             if np.isnan(log_Sk2).any():
                 print(f"Nan values in log S(k) for b = {b} and y = {y}")
-                exit()
+                #exit()
                 #raise ValueError(f"Nan values in log S(k) for b = {b} and y = {y}")
                 # fit_params[j, :] = initial_params
                 # log_Sk2 = log_S2(minimizer, 10**log_k_grid, fit_params[j,:])
@@ -186,7 +186,7 @@ def main(i):
         all_data = pd.concat([all_data, data])
 
         #file_name = f"Au/fit_params/ip{int(b)}.dat"
-        file_name = f"fit_params/ip{int(b)}.dat"
+        file_name = f"fit_params/sample{i}_ip{int(b)}.dat"
         file_params = os.path.join(main_dir, file_name)
         file_params_comments = [f"# Parameter file of fit of dipole from {bk_file}",
                                         '# Dipoles / cross section generated with initial condition: MV model, Qs0^2 = {: .6e}, e_c = {: .6e}, C^2 = {: .6e}, sigma0/2 = {: .6e}'.format(ic_qs[i], ic_ec[i], ic_c2[i], ic_sigma02[i]),
@@ -217,9 +217,9 @@ def main(i):
 
             
 if __name__ == "__main__":
-    n_samples = 4
+    n_samples = 1
     n = range(n_samples)
-    threads = 4
+    threads = 1
     lock = multiprocessing.Lock()
     # with multiprocessing.Pool(threads, init_pool_processes, (lock,)) as pool:
     #     pool.map(main, n)
