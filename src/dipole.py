@@ -111,11 +111,16 @@ class BKDipole:
         i = 0
         for r in r_values:
             N = self.N(Y, r)
-            if logN_values[i] == 0.0:
-                logN_values[i] = 0.0
+
+            if N <= 0.0:
+                logN_values[i] = -9999
+
             else:
                 logN_values[i] = np.log(N)
             i += 1
+
+        # if np.any(logN_values == np.nan()):
+        #     print("Hello there is nan")
 
         #N_values = [np.log(self.N(Y, r)) for r in r_values]
         return np.array(logN_values)

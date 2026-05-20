@@ -1,17 +1,39 @@
 import dipole
 import minimizing
 import numpy as np
-import os
+import os, sys
 from hankel import HankelTransform
 import pandas as pd
 from scipy import integrate
 import multiprocessing
+from scipy.optimize import fsolve
+
 
 lambda_qcd = 0.241 #GeV
 conv_fmGeV = 5.068 # fm to GeV^-1
 d = 0.54 * conv_fmGeV # GeV-1 
 A = 197 # 197 for Au beam, 208 for Pb beam
 conv_mbGeV2 = 2.56819
+
+def qs_func(r, bk_interp, y):
+    #x0 = 1.0
+    #xbj = 0.00001 # 10⁻5
+    #y_int = np.log(x0/x)
+    func = bk_interp(y, r) - (1 - np.exp(-1/2))
+    return func
+
+def solve_qs2(bk_interp, y):
+    r_guess = 0.20
+    r_solution = fsolve(qs_func, r_guess, args = (bk_interp, y))
+    qs_solution = 2/r_solution**2
+
+    if qs_solution < 0 or np.isnan(qs_solution):
+        raise ValueError("Nan or negative Qs solution found.")
+    
+    if bk_interp(y, np.sqrt(2/qs_solution)) > 0.39347 or bk_interp(y, np.sqrt(2/qs_solution)) < 0.39345:
+        raise ValueError("Qs2 does not satisfy the condition N(r=√(2/$Q_s^2$), y) ≈ 1 - exp(-1/2).")
+
+    return qs_solution
 
 def S(interpolator, y,k):
 
@@ -78,17 +100,18 @@ def init_pool_processes(the_lock):
     global lock
     lock = the_lock
 
-def main(i):
+def main(i, dipoles_dir):
 
     ''' 
     
     Loops through all BK-evolved dipoles inside dipoles_dir (each with a corresponding) and optimizes the hyperparameters in form: N(r) = 1 - exp()^gamma. Solves for 2DFT: log_S(k) = log10 S(k) = log10 [ \int r dr J0(k r) ]
     
     '''
-    main_dir = "/home/caaucasu/sidis_fit/data/hm2013"
-    dipoles_dir = os.path.join(main_dir,"Au/bk")
+    #main_dir = "/home/caaucasu/sidis_fit/data/nucleus/parametrization2"
+    #dipoles_dir = os.path.join(main_dir,"posterior")
     #print(f"Reading directory:  {dipoles_dir}" )
-    bk_folder_list = [f for f in os.listdir(dipoles_dir) if f.endswith('.dat')]
+    #bk_folder_list = [f for f in os.listdir(dipoles_dir) if f.endswith('.dat')]
+    main_dir = "data/nucleus/parametrization2"
     lbounds = [0.001, 0.1, 1/np.exp(1), 0.001]
     ubounds = [10.0, 100.0, 100.0, 10.0]
     initial_guess =  [1.0, 1.0, 1.0, 1.0]
@@ -96,7 +119,7 @@ def main(i):
     y_grid_size = 100 #100 # divisions of rapidity grid
     y_max = 8.0
     y_grid = np.linspace(0, y_max, y_grid_size)
-    r_grid = np.logspace(-2, 2, 100) # dipole size logspace 
+    rqs_grid = np.logspace(-3, 2, 100) # dipole size logspace 
     b_grid = range(0, 41, 2)
     log_k_min = -2
     log_k_max = 2
@@ -104,20 +127,23 @@ def main(i):
     log_k_grid = np.linspace(log_k_min, log_k_max, k_grid_size)
     y_array_repeat = np.repeat(y_grid, k_grid_size)
 
+
     #load initial condition parameters
-    ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt(os.path.join(main_dir,"mv_param.dat"), unpack = True)
+    #ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt(os.path.join(main_dir,"mv_param.dat"), unpack = True)
+    ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt("data/dipole/posteriorsamples_100_LOmvefit.dat", unpack = True)
     all_data = pd.DataFrame(columns = ['b', 'y', 'log10_k', 'log10_S(k)'])
     #lock.acquire()
     for b in b_grid: 
         #fname in enumerate(bk_folder_list): # for each posterior sample
-        fname = f"glauber_mv1_{b}"
-        #print(f"Reading BK datafile:  {fname}" )
+        #fname = f"glauber_mv1_{b}"
+        fname = f"ic_197_{b}.dat"
         fit_params = np.ones((y_grid_size,4))
         #print(b, fname)
         #file_params = open(f"fit_params/{i}.dat", "w")
         bk_file = os.path.join(dipoles_dir, fname)
         interpolator = dipole.BKDipole(bk_file)
         Nyr = lambda y, r: interpolator.ln_Nr(y,r)
+        func_solveqs2 = lambda yy,rr: interpolator.N(yy,rr)
         initial_params = [ic_qs, 1.0, ic_ec, 1.0]
         initial_params[0] = 197 * get_TA(b, A) * ic_sigma02 * conv_mbGeV2 * ic_qs
         #  use when looping over posterior samples
@@ -130,6 +156,9 @@ def main(i):
 
         for y in y_grid:
             print(f"Rapidity: {j+1}/{y_grid_size} for b = {b} in {dipoles_dir}")
+            Qs2 = solve_qs2(func_solveqs2, y)
+            print("Qs from BK: ", Qs2)
+            r_grid = rqs_grid/np.sqrt(Qs2)
             minimizer = minimizing.MyMinimizer(Nyr, y, r_grid, initial_guess, lbounds=lbounds, ubounds=ubounds)
             out = minimizer.fit_ls()
             fit_params[j,:] = out.x
@@ -152,7 +181,8 @@ def main(i):
         data = pd.DataFrame({'b': b_repeat, 'y': y_array_repeat, 'log10_k':log_k_all, 'log10_S(k)':log_Sk2_all})
         all_data = pd.concat([all_data, data])
 
-        file_name = f"Au/fit_params/ip{int(b)}.dat"
+        #file_name = f"Au/fit_params/ip{int(b)}.dat"
+        file_name = f"fit_params/ip{int(b)}.dat"
         file_params = os.path.join(main_dir, file_name)
         file_params_comments = [f"# Parameter file of fit of dipole from {bk_file}",
                                         '# Dipoles / cross section generated with initial condition: MV model, Qs0^2 = {: .6e}, e_c = {: .6e}, C^2 = {: .6e}, sigma0/2 = {: .6e}'.format(ic_qs, ic_ec, ic_c2, ic_sigma02),
@@ -166,7 +196,7 @@ def main(i):
                 f.write("{: .6e} {: .6e} {: .6e} {: .6e} {: .6e}\n".format(y_grid[l], fit_params[l,0], fit_params[l,1], fit_params[l,2], fit_params[l,3]))
 
 
-    csv_filename = f'Au/Sk_fit/2Dft_{i}.csv'
+    csv_filename = f'Sk_fit/2Dft_{i}.csv'
     csv_file = os.path.join(main_dir, csv_filename)
     comments = [f'## Fitted to BK evolved dipoles with initial condition: MVe model, Q_s0^2 = {ic_qs} GeV^2, \gamma = 1, coefficient of E inside Log is {ic_ec}',                  
                     f'## Other initial condition parameters: proton transverse area (sigma0/2) is {ic_sigma02} mb and running coupling parameter (C^2) is {ic_c2}',
@@ -183,21 +213,21 @@ def main(i):
 
             
 if __name__ == "__main__":
-    # n_samples = 10
-    # n = range(n_samples)
-    # threads = 4
-    # lock = multiprocessing.Lock()
-    # # with multiprocessing.Pool(threads, init_pool_processes, (lock,)) as pool:
-    # #     pool.map(main, n)
-
-    # with multiprocessing.Pool(threads) as pool:
+    n_samples = 100
+    n = range(n_samples)
+    threads = 4
+    lock = multiprocessing.Lock()
+    # with multiprocessing.Pool(threads, init_pool_processes, (lock,)) as pool:
     #     pool.map(main, n)
 
-    # for i in range(n_samples):
-    #     dipoles_dir = f"../data/nucleus/posterior/{i}"
-    #     print(f"Reading directory:  {dipoles_dir}" )
-    #     main(i, dipoles_dir)
+    with multiprocessing.Pool(threads) as pool:
+        pool.map(main, n)
 
-    # i = sys.argv[1]
-    # dipoles_dir = sys.argv[2]
+    for i in range(n_samples):
+        dipoles_dir = f"data/nucleus/parametrization/posterior/{i}"
+        print(f"Reading directory:  {dipoles_dir}" )
+        main(i, dipoles_dir)
+
+    i = sys.argv[1]
+    dipoles_dir = sys.argv[2]
     main(0)

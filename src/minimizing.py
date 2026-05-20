@@ -27,8 +27,8 @@ class MyMinimizer:
         lambda_qcd = 0.241
         exponent = (((r**2 * Qs2) ** gamma)/4 * np.log( (1/(r*lambda_qcd)) + np.exp(1)*ec ) )** p
         
-        return 1 - np.exp(-exponent) ** (1/p)
-        #return np.log(1 - np.exp(-exponent))
+        return (1 - np.exp(-exponent)) ** (1/p)
+        #return 1 - (np.exp(-exponent)) ** (1/p)
 
     def parametrization(self, Qs2, gamma, ec, p):
         ''' Returns bounded F(r) values over array of r'''
@@ -38,15 +38,22 @@ class MyMinimizer:
         if self.lbounds is not None and self.ubounds is not None:
             for i in range(4):
                 if theta[i] < self.lbounds[i] or theta[i] > self.ubounds[i]:
-                    return np.inf #99999. * np.ones_like(r)
+                    #print("Returning inf for parameters: ", theta)
+                    return 9999 * np.ones_like(r)  ###np.inf #99999. * np.ones_like(r)
+                
+        A = np.array([np.log(self.Ff(ri, Qs2, gamma, ec, p)) for ri in r])
 
-        return np.array([np.log(self.Ff(ri, Qs2, gamma, ec, p)) for ri in r])
+        if np.isnan(A).any():
+            print("Nan values in parametrization for parameters: ", theta)
+
+        return A
     
     def fit_ls(self):
         ''' Least squares fit to find optimal parameters '''
         init = self.initial_params
         r = self.rarray
         #fit_func = lambda p: self.fit_func(p[0], p[1], p[2], p[3])
+        # print("Nry interpolator values: ", self.NrYinterpolator(self.y, r))
         err_func = lambda params, self: self.NrYinterpolator(self.y, r) - self.fit_func(params[0], params[1], params[2], params[3])
         out = least_squares(err_func, init, args = (self,), method = self.lsmethod)
 
