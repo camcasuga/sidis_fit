@@ -1,0 +1,9 @@
+# Parameter file of fit of dipole from data/nucleus/parametrization2/posterior/0/ic_197_28.dat
+# Dipoles / cross section generated with initial condition: MV model, Qs0^2 =  5.442449e-02, e_c =  5.853207e+01, C^2 =  5.198475e+00, sigma0/2 =  1.434349e+01
+# y ranges from 0 to 8.0 in 5 steps
+# Columns: y, Qs2, gamma, ec, p
+ 0.000000e+00  7.786613e-02  1.000000e+00  5.853207e+01  1.000000e+00
+ 2.000000e+00  3.102519e-01  1.016775e+00  5.006997e+00  5.696959e-01
+ 4.000000e+00  6.346500e-01  9.972216e-01  2.608013e+00  5.253413e-01
+ 6.000000e+00  1.131239e+00  9.751439e-01  1.738580e+00  5.235253e-01
+ 8.000000e+00  2.029942e+00  9.594502e-01  2.552364e+00  4.629296e-01
