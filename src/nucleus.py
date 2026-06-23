@@ -109,7 +109,7 @@ def main(i):
     '''
     #main_dir = "/home/caaucasu/sidis_fit/data/nucleus/parametrization2"
     #dipoles_dir = os.path.join(main_dir,"posterior")
-    dipoles_dir = f"data/nucleus/parametrization2/posterior/{i}"
+    dipoles_dir = f"data/nucleus/parametrization2/posterior_extendedBK/{i}"
     #print(f"Reading directory:  {dipoles_dir}" )
     #bk_folder_list = [f for f in os.listdir(dipoles_dir) if f.endswith('.dat')]
     main_dir = "data/nucleus/parametrization2"
@@ -120,7 +120,8 @@ def main(i):
     y_grid_size = 100 # divisions of rapidity grid
     y_max = 8.0
     y_grid = np.linspace(0, y_max, y_grid_size)
-    rqs_grid = np.logspace(-3, 2, 100) # dipole size logspace 
+    logrqsmin = -3
+    rqs_grid = np.logspace(logrqsmin, 2, 100) # dipole size logspace 
     b_grid = range(0, 35, 2)
     log_k_min = -2
     log_k_max = 2
@@ -133,10 +134,8 @@ def main(i):
     #ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt(os.path.join(main_dir,"mv_param.dat"), unpack = True)
     ic_qs, ic_ec, ic_c2, ic_sigma02 = np.loadtxt("data/dipole/posteriorsamples_100_LOmvefit.dat", unpack = True)
     all_data = pd.DataFrame(columns = ['b', 'y', 'log10_k', 'log10_S(k)'])
-    #lock.acquire()
+
     for b in b_grid: 
-        #fname in enumerate(bk_folder_list): # for each posterior sample
-        #fname = f"glauber_mv1_{b}"
         fname = f"ic_197_{b}.dat"
         fit_params = np.ones((y_grid_size,4))
         #print(b, fname)
@@ -165,16 +164,16 @@ def main(i):
             out = minimizer.fit_ls()
             fit_params[j,:] = out.x
 
-            if y == 0:
-                fit_params[j, :] = initial_params
+            # if y == 0:
+            #     fit_params[j, :] = initial_params
             
             log_Sk2 = log_S2(minimizer, 10**log_k_grid, fit_params[j,:])
             if np.isnan(log_Sk2).any():
                 print(f"Nan values in log S(k) for b = {b} and y = {y}")
                 #exit()
                 #raise ValueError(f"Nan values in log S(k) for b = {b} and y = {y}")
-                # fit_params[j, :] = initial_params
-                # log_Sk2 = log_S2(minimizer, 10**log_k_grid, fit_params[j,:])
+                #fit_params[j, :] = initial_params
+                log_Sk2 = np.nan_to_num(log_Sk2, nan = -99999) #log_S2(minimizer, 10**log_k_grid, fit_params[j,:])
             
             #print(f'y = {y},  params = {fit_params[j,:]}')
             log_k_all.extend(log_k_grid)
@@ -186,7 +185,7 @@ def main(i):
         all_data = pd.concat([all_data, data])
 
         #file_name = f"Au/fit_params/ip{int(b)}.dat"
-        file_name = f"fit_params/sample{i}_ip{int(b)}.dat"
+        file_name = f"fit_params/10e{str(logrqsmin)}min/sample{i}_ip{int(b)}.dat"
         file_params = os.path.join(main_dir, file_name)
         file_params_comments = [f"# Parameter file of fit of dipole from {bk_file}",
                                         '# Dipoles / cross section generated with initial condition: MV model, Qs0^2 = {: .6e}, e_c = {: .6e}, C^2 = {: .6e}, sigma0/2 = {: .6e}'.format(ic_qs[i], ic_ec[i], ic_c2[i], ic_sigma02[i]),
@@ -200,14 +199,14 @@ def main(i):
                 f.write("{: .6e} {: .6e} {: .6e} {: .6e} {: .6e}\n".format(y_grid[l], fit_params[l,0], fit_params[l,1], fit_params[l,2], fit_params[l,3]))
 
 
-    csv_filename = f'Sk_fit/2Dft_{i}.csv'
+    csv_filename = f'Sk_fit/10e{str(logrqsmin)}min/2Dft_{i}.csv'
     csv_file = os.path.join(main_dir, csv_filename)
     comments = [f'## Fitted to BK evolved dipoles with initial condition: MVe model, Q_s0^2 = {ic_qs[i]} GeV^2, \gamma = 1, coefficient of E inside Log is {ic_ec[i]}',                  
                     f'## Other initial condition parameters: proton transverse area (sigma0/2) is {ic_sigma02[i]} mb and running coupling parameter (C^2) is {ic_c2[i]}',
                     f'## Note definition of log S(k): log_S(k) = log10 S(k) = log10 [ \int r dr J0(k r) (1 - N(r)) ]',
                     f'## log10_k grid ranges from {log_k_min} to {log_k_max} with {k_grid_size} points',
                     f'## y grid ranges from 0 to {y_max} with {y_grid_size} points',
-                    f'## Impact parameter values, b, ranges from 0 to 40 GeV^-1']
+                    f'## Impact parameter values, b, ranges from 0 to 34 GeV^-1']
 
     with open(csv_file, 'w') as f:
         for comment in comments:
@@ -217,9 +216,9 @@ def main(i):
 
             
 if __name__ == "__main__":
-    n_samples = 1
+    n_samples = 100
     n = range(n_samples)
-    threads = 1
+    threads = 32
     lock = multiprocessing.Lock()
     # with multiprocessing.Pool(threads, init_pool_processes, (lock,)) as pool:
     #     pool.map(main, n)
@@ -228,8 +227,8 @@ if __name__ == "__main__":
         pool.map(main, n)
 
     # for i in range(n_samples):
-    #     # dipoles_dir = f"../data/nucleus/parametrization/posterior/{i}"
-    #     # print(f"Reading directory:  {dipoles_dir}" )
+    #     dipoles_dir = f"../data/nucleus/parametrization/posterior/{i}"
+    #     print(f"Reading directory:  {dipoles_dir}" )
     #     main(i)
 
     #i = sys.argv[1]
