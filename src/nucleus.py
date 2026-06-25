@@ -109,7 +109,7 @@ def main(i):
     '''
     #main_dir = "/home/caaucasu/sidis_fit/data/nucleus/parametrization2"
     #dipoles_dir = os.path.join(main_dir,"posterior")
-    dipoles_dir = f"data/nucleus/parametrization2/posterior_extendedBK/{i}"
+    dipoles_dir = f"data/nucleus/posterior_extendedBK/{i}"
     #print(f"Reading directory:  {dipoles_dir}" )
     #bk_folder_list = [f for f in os.listdir(dipoles_dir) if f.endswith('.dat')]
     main_dir = "data/nucleus/parametrization2"
@@ -121,7 +121,7 @@ def main(i):
     y_max = 8.0
     y_grid = np.linspace(0, y_max, y_grid_size)
     logrqsmin = -3
-    rqs_grid = np.logspace(logrqsmin, 2, 100) # dipole size logspace 
+    rqs_grid = np.logspace(logrqsmin, 2, 500) # dipole size logspace 
     b_grid = range(0, 35, 2)
     log_k_min = -2
     log_k_max = 2
