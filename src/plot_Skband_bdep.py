@@ -23,16 +23,22 @@ def Sk_interp_b(b, sk_file):
 
 def main(sk_files_dir, y_val, b_val = None):
 
-    sk_files_dir_list = glob.glob(sk_files_dir + "/*.csv")
-    sk_files_dir_list.sort()
+    #sk_files_dir_list = glob.glob(sk_files_dir + "/*.csv")
+    #print(sk_files_dir_list)
+    #sk_files_dir_list.sort()
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-    b_vals = [0.0, 4.0, 8.0]
+    b_vals = [0.0, ]
+    interpolators = []
+    # for sk_file in sk_files_dir_list:
+    #     print(f"Reading file: {sk_file}")
+    #     interpolators.append(Sk_interp_b(b_val, sk_file))
     for b_val in b_vals:
-        interpolators = []
-        for sk_file in sk_files_dir_list:
+            
+        for j in range(100):
+            sk_file = os.path.join(sk_files_dir, f"2Dft_{j}.csv")
             print(f"Reading file: {sk_file}")
             interpolators.append(Sk_interp_b(b_val, sk_file))
-        
+
         k_values = 100
         log_k_grid = np.linspace(-2, 2, k_values)
         mean = np.zeros(k_values)
@@ -42,7 +48,7 @@ def main(sk_files_dir, y_val, b_val = None):
         i = 0
         for log_k in log_k_grid:
             log_SK = np.array([interpolator(y_val, log_k) for interpolator in interpolators])
-            print(log_SK)
+            #print(log_SK)
             mean[i] = np.mean(log_SK)
             lower_region = log_SK < mean[i]
             upper_region = log_SK > mean[i]
@@ -50,13 +56,13 @@ def main(sk_files_dir, y_val, b_val = None):
             down_sd[i] = np.std(log_SK[lower_region])
             i += 1
 
-        #ax.plot(log_k_grid, mean, label=f'y = {y_val}, b = {b_val}', color = 'blue')
+        ax.plot(log_k_grid, mean, label=f'y = {y_val}, b = {b_val}')
         ax.fill_between(log_k_grid, mean - 2*down_sd, mean + 2*up_sd, alpha=0.4)
 
-    ax.legend()
+    #ax.legend()
     ax.set_xlabel('log10(k)')
     ax.set_ylabel('log10(S(k))')
-    fig.savefig("../plots/logsk_fory_nucleus_bdep.pdf", dpi=300)
+    fig.savefig("logsk_fory_nucleus_bdep.pdf", dpi=300)
 
 if __name__ == "__main__":
 
@@ -68,6 +74,6 @@ if __name__ == "__main__":
     y = sys.argv[1]
     #b = int(sys.argv[2])
     
-    sk_files_dir = "../data/nucleus/Sk_fit"
+    sk_files_dir = "/home/caaucasu/sidis_fit/data/nucleus/parametrization2/Sk_fit/10e-3min"
     main(sk_files_dir, y)
 
